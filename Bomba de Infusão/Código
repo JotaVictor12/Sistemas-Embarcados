@@ -1,0 +1,127 @@
+const int LED1 = 3;
+const int LED2 = 9;
+const int LED3 = 5;
+const int LED4 = 6;
+const int Pot1 = A1;  
+const int LDR = A0;   
+
+int pwm = 0;                 
+int ledAtual = 0;             
+bool todosLedsAcesos = false; 
+unsigned long previousMillis = 0;  
+int ldr = 0;                
+int lastLdr = 0;             
+unsigned long ldrAlertTime = 0;  
+unsigned long potMinTime = 0;   
+bool Alerta = false;          
+
+void setup() {
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
+  digitalWrite(LED1, LOW);
+  digitalWrite(LED2, LOW);
+  digitalWrite(LED3, LOW);
+  digitalWrite(LED4, LOW);
+  pinMode(LDR, INPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int pot = analogRead(Pot1);  // Leitura do potenciômetro
+  unsigned long currentMillis = millis();
+
+  // Lê o valor do LDR
+  ldr = analogRead(LDR);
+
+  // Verifica se há variação no LDR que indica bolha de ar no manguito
+  if (ldr > lastLdr + 50 || ldr < lastLdr - 50) {
+    ldrAlertTime = currentMillis;  // Marca o início do alerta
+    Alerta = true;
+    Serial.println("Alerta: Bolha de ar detectada!");
+  }
+
+  // Verifica se o potenciômetro ficou no mínimo por 3 segundos
+  if (pot <= 10) {
+    if (potMinTime == 0) {
+      potMinTime = currentMillis;  // Marca o tempo quando o potenciômetro entrou no mínimo
+    }
+    // Verifica se o potenciômetro ficou no mínimo por 3 segundos
+    if (currentMillis - potMinTime >= 3000) {
+      Alerta = false;
+      Serial.println("Alerta resolvido!");
+      potMinTime = 0;
+    }
+  } else {
+    potMinTime = 0;  // Reseta o temporizador se o potenciômetro não estiver no mínimo
+  }
+
+  if (Alerta) {
+    // Pisca os LEDs enquanto no modo de alerta
+    unsigned long blinkMillis = currentMillis % 1000;
+    if (blinkMillis < 500) {
+      digitalWrite(LED1, HIGH);
+      digitalWrite(LED2, HIGH);
+      digitalWrite(LED3, HIGH);
+      digitalWrite(LED4, HIGH);
+    } else {
+      digitalWrite(LED1, LOW);  
+      digitalWrite(LED2, LOW);
+      digitalWrite(LED3, LOW);
+      digitalWrite(LED4, LOW);
+    }
+  } else {
+    // Ajusta o tempo de delay baseado no potenciômetro manualmente
+    int delayTime = (pot / 1023.0) * 190 + 10;  // Convertendo o valor de pot diretamente para um intervalo entre 10 e 200ms
+
+    // Verifica se é hora de atualizar o brilho
+    if (currentMillis - previousMillis >= delayTime) {
+      previousMillis = currentMillis;
+
+      if (!todosLedsAcesos) {
+        // Acende o LED atual gradualmente
+        pwm += 5;
+        switch (ledAtual) {
+          case 0:
+            analogWrite(LED1, pwm);
+            break;
+          case 1:
+            analogWrite(LED2, pwm);
+            break;
+          case 2:
+            analogWrite(LED3, pwm);
+            break;
+          case 3:
+            analogWrite(LED4, pwm);
+            break;
+        }
+
+        // Passa para o próximo LED quando o atual atingir brilho máximo
+        if (pwm >= 255) {
+          pwm = 0; // Reinicia o brilho para o próximo LED
+          ledAtual++;
+
+          // Verifica se todos os LEDs foram acesos
+          if (ledAtual >= 4) {
+            todosLedsAcesos = true;
+            ledAtual = 0;
+          }
+        }
+      } else {
+        // Apaga todos os LEDs de uma vez
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, LOW);
+
+        // Reinicia o ciclo
+        todosLedsAcesos = false;
+        pwm = 0;
+      }
+    }
+  }
+
+  // Atualiza o valor do LDR para a próxima leitura
+  lastLdr = ldr;
+}
