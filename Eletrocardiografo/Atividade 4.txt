@@ -1,0 +1,61 @@
+unsigned int adc_value;
+char display_digits[10] = {0b00111111, 0b00000110, 0b01011011, 0b01001111, 0b01100110,
+                           0b01101101, 0b01111101, 0b00000111, 0b01111111, 0b01101111}; // Catodo comum
+
+void display_number(unsigned int num) {
+    char milhar, centena, dezena, unidade;
+
+    milhar  = num / 1000;
+    centena = (num / 100) % 10;
+    dezena  = (num / 10) % 10;
+    unidade = num % 10;
+
+    PORTA = 0b00000100;
+    PORTD = display_digits[milhar];
+    Delay_ms(5);
+    PORTA = 0;
+
+    PORTA = 0b00001000;
+    PORTD = display_digits[centena];
+    Delay_ms(5);
+    PORTA = 0;
+
+
+    PORTA = 0b00010000;
+    PORTD = display_digits[dezena];
+    Delay_ms(5);
+    PORTA = 0;
+
+
+    PORTA = 0b00100000;
+    PORTD = display_digits[unidade];
+    Delay_ms(5);
+    PORTA = 0;
+}
+
+void main() {
+    ADCON1 = 0x80;
+    TRISA = 0b00000001;
+    TRISC.RC1 = 0;
+    TRISD = 0x00;
+    TRISB = 0x00;
+    PORTA = 0;
+    PORTD = 0;
+    PORTB = 0;
+    PORTC.RC1 = 1;
+
+    ADC_Init();
+
+    while (1) {
+        adc_value = ADC_Read(0);
+
+        display_number(adc_value);
+
+
+        if (adc_value < 255) {
+            PORTC.RC1 = 1;
+        } else {
+            PORTC.RC1 = 0;
+        }
+    }
+}
