@@ -1,0 +1,82 @@
+// Definindo algumas variáveis
+#define BT1 3
+#define BT2 4
+#define ledVermelho 8
+int lastMillis = 0;
+int buttonCount = 0;
+int BT2Count = 0;
+int reset = 0;
+int millisAtual = 0;
+bool ledLigado = false;
+bool BT2Ligado = false;
+// Variáveis do Debounce
+int Debounce = 250;
+int ultimoDebounce = 0;
+void setup()
+{ // Inicializando os Leds, botões e monitor serial.
+  pinMode(3, INPUT_PULLUP);
+  pinMode(4, INPUT_PULLUP);
+  pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(11, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Selecione o tipo de tratamento!");
+}
+
+void loop()
+{ // Lógica do BT2, responsável por iniciar/encerrar o tratamento!
+  if(digitalRead(BT2) == 0){ // Liga o led vermelho somente se estivesse desligado anteriormente
+    if(!ledLigado && digitalRead(BT2) != 1){
+    	digitalWrite(ledVermelho, HIGH);
+      	ledLigado = true;
+      	Serial.println("Tratamento iniciado!");
+      	BT2Count = millis();
+    } else { // Caso o led já esteja ligado e o botão fique pressionado por 3s, desliga o led vermelho
+      if (millis() - BT2Count > 3000){
+      		digitalWrite(ledVermelho, LOW);
+        	Serial.println("Tratamento encerrado!");
+        	delay(1000);
+          	ledLigado = false;
+          	BT2Ligado = true;
+         } 
+  	 	} 
+       } else { // Reinicia a contagem caso o botão seja soltado no meio
+        	BT2Ligado = false;
+          	BT2Count = millis();
+  } 
+   millisAtual = millis();
+   if(digitalRead(BT1) == 0 && (millisAtual - ultimoDebounce > Debounce)){ // Realiza o Debounce no BT1
+      buttonCount++;
+
+      switch(buttonCount){ // Específica cada caso do BT1. 
+          case 1:
+          Serial.println("Tratamento 1 selecionado!");
+          digitalWrite(9, HIGH);
+          digitalWrite(10, LOW);
+          digitalWrite(11, LOW);
+          break;
+          case 2:
+          Serial.println("Tratamento 2 selecionado!");
+          digitalWrite(9, LOW);
+          digitalWrite(10, HIGH);
+          digitalWrite(11, LOW);
+          break;
+          case 3:
+          Serial.println("Tratamento 3 selecionado!");
+          digitalWrite(9, LOW);
+          digitalWrite(10, LOW);
+          digitalWrite(11, HIGH);
+          break;
+          case 4:
+          Serial.println("Nenhum tratamento selecionado!");
+          digitalWrite(11, LOW);
+          buttonCount = 0;
+          break;
+   } 
+     ultimoDebounce = millisAtual;
+  }
+}
+       
+
+
